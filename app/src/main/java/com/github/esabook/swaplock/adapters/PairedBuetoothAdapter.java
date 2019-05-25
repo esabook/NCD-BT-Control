@@ -8,18 +8,19 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 
+
 import com.github.esabook.swaplock.R;
 import com.github.esabook.swaplock.databinding.RowDeviceBinding;
 
 import java.util.List;
 
 public class PairedBuetoothAdapter extends ArrayAdapter<BluetoothDevice> {
-    public PairedBuetoothAdapter(Context context, int resource,List<BluetoothDevice> objects) {
+    public PairedBuetoothAdapter(Context context, int resource, List<BluetoothDevice> objects) {
         super(context, resource, objects);
     }
 
     @Override
-    public View getView(int position,View convertView, ViewGroup parent) {
+    public View getView(int position, View convertView, ViewGroup parent) {
         RowDeviceBinding itemBinding;
         if (convertView == null) {
             convertView = LayoutInflater.from(parent.getContext()).inflate(R.layout.row_device, null);
@@ -29,7 +30,7 @@ public class PairedBuetoothAdapter extends ArrayAdapter<BluetoothDevice> {
             itemBinding = (RowDeviceBinding) convertView.getTag();
         }
         BluetoothDevice obj = getItem(position);
-        if (obj != null){
+        if (obj != null) {
             itemBinding.textView2.setText(obj.getName());
         }
         return itemBinding.getRoot();

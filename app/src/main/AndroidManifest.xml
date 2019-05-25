@@ -20,14 +20,22 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
-        <activity android:name=".ControlActivity"/>
-        <activity android:name=".ScanActivity" android:exported="true" />
-        <activity android:name=".MainActivity">   <intent-filter>
+
+        <activity
+            android:name=".activity.BatterySwapActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize">
             <action android:name="android.intent.action.MAIN" />
 
             <category android:name="android.intent.category.LAUNCHER" />
-        </intent-filter>
+            <intent-filter>
+            </intent-filter>
         </activity>
+        <activity
+            android:name=".activity.BatteryScanActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize" />
+        <activity
+            android:name=".activity.BatteryControlActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize" />
     </application>
 
 </manifest>

@@ -1,6 +1,7 @@
-package com.github.esabook.swaplock;
+package com.github.esabook.swaplock.activity;
 
 import android.Manifest;
+import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -14,14 +15,16 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.v4.app.ActivityCompat;
+import android.view.View;
 import android.widget.Toast;
 
+import com.github.esabook.swaplock.R;
 import com.github.esabook.swaplock.databinding.ActivityControlBinding;
 import com.github.esabook.swaplock.utils.BatteryController;
 
 //import android.support.annotation.UiThread;
 
-public class ControlActivity extends MainActivity {
+public class BatteryControlActivity extends BatterySwapActivity {
 
     public static final String BT_DEVICE = "BT_DEVICE";
     public static final String BT_DEVICE_ADDRES = "BT_DEVICE_ADDRESS";
@@ -38,27 +41,28 @@ public class ControlActivity extends MainActivity {
      */
     BatteryController.BtModuleEventListener mBtEventListener = (device, event) -> {
 
-                new Handler(Looper.getMainLooper()).post(new Runnable() {
-                    @Override
-                    public void run() {
-                        if (device != null)
-                            mBinding.txName.setText(device.getName());
-                        else
-                            mBinding.txName.setText(null);
+        new Handler(Looper.getMainLooper()).post(new Runnable() {
+            @Override
+            public void run() {
+                if (device != null)
+                    mBinding.txName.setText(device.getName());
+                else
+                    mBinding.txName.setText(null);
 
-                        // enabling button if successfully connected
-                        isBatteryConected = event == BatteryController.BtModuleEvent.CONNECT;
-                        String isConnectedInfo = isBatteryConected ? "Connected" : "Disconnected";
-                        mBinding.txInfo.setText(isConnectedInfo);
-                        mBinding.setRelockButtonEnabled(isBatteryConected);
+                // enabling button if successfully connected
+                isBatteryConected = event != BatteryController.BtModuleEvent.DISCONNECT;
+                String isConnectedInfo = isBatteryConected ? "Connected" : "Disconnected";
+                mBinding.txInfo.setText(isConnectedInfo);
+                mBinding.tipReconnect.setVisibility(isBatteryConected ? View.GONE : View.VISIBLE);
+                mBinding.setToggleButtonEnabled(isBatteryConected);
 
-                        if (event != BatteryController.BtModuleEvent.DISCONNECT) {
-                            isBatteryOn();
-                        }
-                    }
-                });
+                if (isBatteryConected) {
+                    isBatteryOn();
+                }
+            }
+        });
 
-            };
+    };
 
 
     /**
@@ -71,20 +75,21 @@ public class ControlActivity extends MainActivity {
             switch (action) {
 
                 case BluetoothDevice.ACTION_PAIRING_REQUEST: {
-                    boolean isNeedPermission = ActivityCompat.checkSelfPermission(ControlActivity.this,
+                    boolean isNeedPermission = ActivityCompat.checkSelfPermission(BatteryControlActivity.this,
                             Manifest.permission.BLUETOOTH_PRIVILEGED) != PackageManager.PERMISSION_GRANTED;
 
                     // dialog request permission
                     if (isNeedPermission) {
                         ActivityCompat.requestPermissions(
-                                ControlActivity.this,
-                                new String[]{ Manifest.permission.BLUETOOTH_PRIVILEGED},
+                                BatteryControlActivity.this,
+                                new String[]{Manifest.permission.BLUETOOTH_PRIVILEGED},
                                 0);
                     }
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
                         try {
                             mBtController.getBtDevice().setPairingConfirmation(false);
-                        } catch (Exception ignore){}
+                        } catch (Exception ignore) {
+                        }
                         mBtController.getBtDevice().setPin("1234".getBytes());
                         mBtController.getBtDevice().createBond();
                     }
@@ -97,6 +102,10 @@ public class ControlActivity extends MainActivity {
 //                    }
 //                    break;
 //                }
+
+                case BluetoothDevice.ACTION_ACL_DISCONNECTED: {
+                    mBtEventListener.event(mBtController.getBtDevice(), BatteryController.BtModuleEvent.DISCONNECT);
+                }
             }
 
         }
@@ -114,12 +123,17 @@ public class ControlActivity extends MainActivity {
         BluetoothDevice mBtDevice = getIntent().getParcelableExtra(BT_DEVICE);
         mBtAddress = getIntent().getStringExtra(BT_DEVICE_ADDRES);
         if (mBtDevice != null) mBtAddress = mBtDevice.getAddress();
+        if (!BluetoothAdapter.checkBluetoothAddress(mBtAddress)) {
+            Toast.makeText(this, "Device Address Invalid", Toast.LENGTH_LONG).show();
+            finish();
+        }
         mBtController = new BatteryController(mBtAddress, mBtEventListener);
 
         // listening BT pair request
         IntentFilter intent = new IntentFilter(BluetoothDevice.ACTION_PAIRING_REQUEST);
         registerReceiver(mReceiver, intent);
-
+        intent = new IntentFilter(BluetoothDevice.ACTION_ACL_DISCONNECTED);
+        registerReceiver(mReceiver, intent);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         reLayout();
     }
@@ -157,30 +171,7 @@ public class ControlActivity extends MainActivity {
      */
     void reLayout() {
 
-//        mBinding.button3.setEnabled(false);
-//        mBinding.button3.setOnClickListener(v ->{
-//            String cmd = mBinding.editText.getText().toString();
-//            String[] cmds = cmd.split(" ");
-//            Byte[] command = new Byte[cmds.length];
-//            for (int i =0; i< cmds.length; i++){
-//                command[i] = (byte) Integer.parseInt(cmds[i]);
-//            }
-//            sendCommand(command);
-//        });
-
-
         // return to off-ing (lock) and checkout for on-ing (unlock)
-        mBinding.btnReturn.setOnClickListener(v -> {
-            if (!isBatteryConected) {
-                Toast.makeText(this, "Make sure battery is connected", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            mBinding.setRelockButtonEnabled(false);
-            if (lockBattery()) {
-                mBinding.setIsResultMode(true);
-            }
-            mBinding.setRelockButtonEnabled(true);
-        });
         mBinding.btnCheckout.setOnClickListener(v -> {
 
             if (!isBatteryConected) {
@@ -188,48 +179,24 @@ public class ControlActivity extends MainActivity {
                 return;
             }
 
-            mBinding.setRelockButtonEnabled(false);
-            if (unlockBattery()) {
+            mBinding.setToggleButtonEnabled(false);
+
+            if (mBinding.getIsBatteryLocked()
+                    ? unlockBattery()
+                    : lockBattery()) {
                 mBinding.setIsResultMode(true);
             }
-            mBinding.setRelockButtonEnabled(true);
+            mBinding.setToggleButtonEnabled(true);
+
         });
 
 
         // contacting device to connect
         mBinding.img.setOnClickListener(v -> {
             // connect to device
-          new ConnectBtAsync().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+            new ConnectBtAsync().executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
         });
 
-    }
-
-
-
-//    @UiThread
-    class ConnectBtAsync extends AsyncTask<Void, Void, Boolean> {
-        @Override
-        protected Boolean doInBackground(Void... voids) {
-            // connect to device
-            //                if (checkPWM()) {
-            //                }
-            return mBtController.connect(mBtAddress);
-        }
-
-        @Override
-        protected void onPreExecute() {
-            mBinding.txInfo.setText("Connecting...");
-            super.onPreExecute();
-        }
-
-        @Override
-        protected void onPostExecute(Boolean aBoolean) {
-            mBtEventListener.event(mBtController.getBtDevice(),
-                    aBoolean
-                    ? BatteryController.BtModuleEvent.CONNECT
-                    : BatteryController.BtModuleEvent.DISCONNECT);
-            super.onPostExecute(aBoolean);
-        }
     }
 
     // translate device status as battery info
@@ -257,7 +224,7 @@ public class ControlActivity extends MainActivity {
         command[5] = (byte) 16;
 
         System.out.println("Start to off-ing (lock) relay 1");
-        if ( mBtController.sendCommand(command)){
+        if (mBtController.sendCommand(command)) {
             mBtEventListener.event(mBtController.getBtDevice(), BatteryController.BtModuleEvent.RELAY_OFF);
             return true;
         }
@@ -274,11 +241,37 @@ public class ControlActivity extends MainActivity {
         command[5] = (byte) 24;
 
         System.out.println("Start to on-ing (unlock) relay 1");
-        if (mBtController.sendCommand(command)){
+        if (mBtController.sendCommand(command)) {
             mBtEventListener.event(mBtController.getBtDevice(), BatteryController.BtModuleEvent.RELAY_ON);
             return true;
         }
         return false;
+    }
+
+    //    @UiThread
+    class ConnectBtAsync extends AsyncTask<Void, Void, Boolean> {
+        @Override
+        protected Boolean doInBackground(Void... voids) {
+            // connect to device
+            //                if (checkPWM()) {
+            //                }
+            return mBtController.connect(mBtAddress);
+        }
+
+        @Override
+        protected void onPreExecute() {
+            mBinding.txInfo.setText("Connecting...");
+            super.onPreExecute();
+        }
+
+        @Override
+        protected void onPostExecute(Boolean aBoolean) {
+            mBtEventListener.event(mBtController.getBtDevice(),
+                    aBoolean
+                            ? BatteryController.BtModuleEvent.CONNECT
+                            : BatteryController.BtModuleEvent.DISCONNECT);
+            super.onPostExecute(aBoolean);
+        }
     }
 
 

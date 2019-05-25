@@ -1,24 +1,19 @@
-package com.github.esabook.swaplock;
+package com.github.esabook.swaplock.activity;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.databinding.DataBindingUtil;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.Paint;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Vibrator;
-import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -26,65 +21,41 @@ import android.support.v7.app.AlertDialog;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
-import android.util.TypedValue;
 import android.view.KeyEvent;
-import android.view.Menu;
 import android.view.MenuItem;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.view.WindowManager;
-import android.widget.ImageView;
-import android.widget.TextView;
 
+import com.github.esabook.swaplock.R;
 import com.github.esabook.swaplock.databinding.ActivityScanBinding;
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.DecodeHintType;
+import com.google.zxing.Result;
 import com.github.esabook.swaplock.zxing.AmbientLightManager;
 import com.github.esabook.swaplock.zxing.CaptureActivityHandler;
+import com.github.esabook.swaplock.zxing.DecodeFormatManager;
 import com.github.esabook.swaplock.zxing.InactivityTimer;
 import com.github.esabook.swaplock.zxing.IntentSource;
 import com.github.esabook.swaplock.zxing.Intents;
 import com.github.esabook.swaplock.zxing.ViewfinderView;
 import com.github.esabook.swaplock.zxing.camera.CameraManager;
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.DecodeHintType;
-import com.google.zxing.Result;
-import com.google.zxing.ResultMetadataType;
-import com.google.zxing.ResultPoint;
 
 import java.io.IOException;
-import java.text.DateFormat;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.EnumSet;
 import java.util.Map;
 
 //import com.github.esabook.swaplock.zxing.BeepManager;
 //import com.github.esabook.swaplock.zxing.result.ResultButtonListener;
 //import com.github.esabook.swaplock.zxing.result.ResultHandlerFactory;
 
-public class ScanActivity extends MainActivity implements SurfaceHolder.Callback {
+public class BatteryScanActivity extends BatterySwapActivity implements SurfaceHolder.Callback {
 
+    private static final String TAG = BatteryScanActivity.class.getSimpleName();
     ActivityScanBinding mBinding;
-
-    private static final String TAG = ScanActivity.class.getSimpleName();
-
-    private static final long DEFAULT_INTENT_RESULT_DURATION_MS = 1500L;
-    private static final long BULK_MODE_SCAN_DELAY_MS = 1000L;
-
-    private static final String[] ZXING_URLS = {"http://zxing.appspot.com/scan", "zxing://scan/"};
-
-    private static final int HISTORY_REQUEST_CODE = 0x0000bacc;
-
-    private static final Collection<ResultMetadataType> DISPLAYABLE_METADATA_TYPES =
-            EnumSet.of(ResultMetadataType.ISSUE_NUMBER,
-                    ResultMetadataType.SUGGESTED_PRICE,
-                    ResultMetadataType.ERROR_CORRECTION_LEVEL,
-                    ResultMetadataType.POSSIBLE_COUNTRY);
-
     private CameraManager cameraManager;
     private CaptureActivityHandler handler;
     private Result savedResultToShow;
@@ -92,7 +63,7 @@ public class ScanActivity extends MainActivity implements SurfaceHolder.Callback
     private Result lastResult;
     private boolean hasSurface;
     private IntentSource source;
-    private Collection<BarcodeFormat> decodeFormats = EnumSet.of(BarcodeFormat.QR_CODE);
+    private Collection<BarcodeFormat> decodeFormats = DecodeFormatManager.QR_CODE_FORMATS;
     private Map<DecodeHintType, ?> decodeHints;
     private String characterSet;
     private InactivityTimer inactivityTimer;
@@ -124,9 +95,10 @@ public class ScanActivity extends MainActivity implements SurfaceHolder.Callback
 
         // button scan (next page)
         mBinding.btnForScan.setOnClickListener(v -> {
-            Intent intent = new Intent(ScanActivity.this, ControlActivity.class);
-            intent.putExtra(ControlActivity.BT_DEVICE_ADDRES, mBinding.mac.getText().toString());
+            Intent intent = new Intent(BatteryScanActivity.this, BatteryControlActivity.class);
+            intent.putExtra(BatteryControlActivity.BT_DEVICE_ADDRES, mBinding.mac.getText().toString());
             startActivity(intent);
+            finish();
         });
 
         // back to list
@@ -189,7 +161,8 @@ public class ScanActivity extends MainActivity implements SurfaceHolder.Callback
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if (isCameraPermissionGranted()) {
-            startScanner();
+            finish();
+            startActivity(new Intent(this, this.getClass()));
         } else {
             stopScanner();
         }
@@ -333,12 +306,13 @@ public class ScanActivity extends MainActivity implements SurfaceHolder.Callback
 
         SurfaceView surfaceView = findViewById(R.id.preview_view);
         SurfaceHolder surfaceHolder = surfaceView.getHolder();
+
         if (hasSurface) {
-            // The activity was paused but not stopped, so the surface still exists. Therefore
-            // surfaceCreated() won't be called, so init the camera here.
+//            // The activity was paused but not stopped, so the surface still exists. Therefore
+//            // surfaceCreated() won't be called, so init the camera here.
             initCamera(surfaceHolder);
         } else {
-            // Install the callback and wait for surfaceCreated() to init the camera.
+//            // Install the callback and wait for surfaceCreated() to init the camera.
             surfaceHolder.addCallback(this);
         }
     }

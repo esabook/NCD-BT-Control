@@ -22,6 +22,8 @@
     <color name="status_text">#ffffffff</color>
     <!-- Android standard ICS color -->
 
+
+    <color name="background_tab_pressed">#a0484848</color>
     <!--wireframe view color-->
 
 </resources>

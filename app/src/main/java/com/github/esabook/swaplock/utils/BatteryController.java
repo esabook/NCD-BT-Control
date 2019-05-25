@@ -19,6 +19,19 @@ public class BatteryController {
     private BluetoothSocket btSocket;
     private BluetoothAdapter mBtAdapter;
 
+    public BatteryController(String btAddress, BtModuleEventListener listener) {
+        mBtAddress = btAddress;
+        mBtAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (listener == null) {
+            mBtEventListener = (device, event) -> {
+            };
+        }
+    }
+
+    public BatteryController(BluetoothDevice btDevice, BtModuleEventListener listener) {
+        this(btDevice.getAddress(), listener);
+    }
+
     public String getBtAddress() {
         return mBtAddress;
     }
@@ -38,44 +51,6 @@ public class BatteryController {
     public BluetoothAdapter getmBtAdapter() {
         return mBtAdapter;
     }
-
-
-    public BatteryController(String btAddress, BtModuleEventListener listener) {
-        mBtAddress = btAddress;
-        mBtAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (listener == null) {
-            mBtEventListener = (device, event) -> {
-            };
-        }
-    }
-
-    public BatteryController(BluetoothDevice btDevice, BtModuleEventListener listener) {
-        this(btDevice.getAddress(), listener);
-    }
-
-
-    /**
-     *
-     */
-    public enum BtModuleEvent {
-        CONNECT(1),
-        DISCONNECT(0),
-        RELAY_ON(2),
-        RELAY_OFF(3);
-
-
-        BtModuleEvent(int i) {
-
-        }
-    }
-
-    /**
-     *
-     */
-    public interface BtModuleEventListener {
-        void event(BluetoothDevice device, BtModuleEvent event);
-    }
-
 
     /**
      * @param command
@@ -103,7 +78,6 @@ public class BatteryController {
             return false;
         }
     }
-
 
     //Bluetooth Connect
     public boolean connect(String address) {
@@ -168,113 +142,6 @@ public class BatteryController {
             }
         }
 
-
-    }
-
-    /**
-     *
-     */
-    public class SendCommandBT extends AsyncTask<Byte, Integer, byte[]> {
-
-        @Override
-        protected byte[] doInBackground(Byte... command) {
-
-            //Socket not yet created so create it
-            if (btSocket == null) {
-                //No Address so stop
-                if (mBtAddress == null) {
-                    System.out.println("No Selected device");
-                    return null;
-                }
-
-                mBtDevice = mBtAdapter.getRemoteDevice(mBtAddress);
-                try {
-                    btSocket = mBtDevice.createRfcommSocketToServiceRecord(java.util.UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
-                    System.out.println("btSocket object created");
-                } catch (IOException e) {
-                    //Could not create socket so stop
-                    System.out.println("Exception creating socket");
-                    e.printStackTrace();
-                    btSocket = null;
-                    return null;
-                }
-            }
-            //Socket is not yet connected so connect it
-            if (!btSocket.isConnected()) {
-                try {
-                    //					btAdapter.cancelDiscovery();
-                    btSocket.connect();
-                    System.out.println("Connected");
-                    //Sleep required after connection due to trash data bluetooth module puts out to chip after connection.
-                    Thread.sleep(500);
-                } catch (IOException e) {
-                    //Could not connect so stop
-                    System.out.println("could not connect bt");
-                    e.printStackTrace();
-                    disconnect();
-                    btSocket = null;
-                    return null;
-                } catch (InterruptedException e) {
-                    System.out.println("Exception on Sleep");
-                    e.printStackTrace();
-                    disconnect();
-                    return null;
-                }
-            }
-
-            //send the command
-            //Generate byte command to be sent
-            byte[] sendCommand = new byte[command.length];
-
-            for (int i = 0; i < command.length; i++) {
-                sendCommand[i] = command[i];
-            }
-
-            //send the command
-            try {
-                System.out.println("Sending: " + Arrays.toString(sendCommand));
-                btSocket.getOutputStream().write(sendCommand);
-
-                //wait for a response
-                long startTime = System.currentTimeMillis();
-                long timeout = 3000;
-                while (System.currentTimeMillis() < (startTime + timeout)) {
-                    if (btSocket.getInputStream().available() != 0) {
-                        break;
-                    }
-                    System.out.println("Bytes in inputStream: " + btSocket.getInputStream().available());
-                    System.out.println("timeout: " + (System.currentTimeMillis() > (startTime + timeout)));
-                    Thread.sleep(100);
-                }
-
-                //Check that we got a response
-                if (btSocket.getInputStream().available() == 0) {
-                    //No Data returned so return null
-                    System.out.println("No Data Returned here");
-                    disconnect();
-                    return null;
-
-                }
-                Thread.sleep(100);
-                //Success
-                byte[] returnData = new byte[btSocket.getInputStream().available()];
-                btSocket.getInputStream().read(returnData);
-                System.out.println("Received: " + Arrays.toString(returnData) + "After " + (System.currentTimeMillis() - startTime) + " ms");
-                return returnData;
-
-            } catch (IOException e) {
-                System.out.println("Exception reading or writing to Bluetooth Socket");
-                e.printStackTrace();
-                disconnect();
-                return null;
-            } catch (InterruptedException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-                return null;
-            } catch (NullPointerException e){
-                return null;
-            }
-        }
 
     }
 
@@ -412,6 +279,135 @@ public class BatteryController {
             return null;
         }
 
+
+    }
+
+    /**
+     *
+     */
+    public enum BtModuleEvent {
+        CONNECT(1),
+        DISCONNECT(0),
+        RELAY_ON(2),
+        RELAY_OFF(3);
+
+
+        BtModuleEvent(int i) {
+
+        }
+    }
+
+    /**
+     *
+     */
+    public interface BtModuleEventListener {
+        void event(BluetoothDevice device, BtModuleEvent event);
+    }
+
+    /**
+     *
+     */
+    public class SendCommandBT extends AsyncTask<Byte, Integer, byte[]> {
+
+        @Override
+        protected byte[] doInBackground(Byte... command) {
+
+            //Socket not yet created so create it
+            if (btSocket == null) {
+                //No Address so stop
+                if (mBtAddress == null) {
+                    System.out.println("No Selected device");
+                    return null;
+                }
+
+                mBtDevice = mBtAdapter.getRemoteDevice(mBtAddress);
+                try {
+                    btSocket = mBtDevice.createRfcommSocketToServiceRecord(java.util.UUID.fromString("00001101-0000-1000-8000-00805F9B34FB"));
+                    System.out.println("btSocket object created");
+                } catch (IOException e) {
+                    //Could not create socket so stop
+                    System.out.println("Exception creating socket");
+                    e.printStackTrace();
+                    btSocket = null;
+                    return null;
+                }
+            }
+            //Socket is not yet connected so connect it
+            if (!btSocket.isConnected()) {
+                try {
+                    //					btAdapter.cancelDiscovery();
+                    btSocket.connect();
+                    System.out.println("Connected");
+                    //Sleep required after connection due to trash data bluetooth module puts out to chip after connection.
+                    Thread.sleep(500);
+                } catch (IOException e) {
+                    //Could not connect so stop
+                    System.out.println("could not connect bt");
+                    e.printStackTrace();
+                    disconnect();
+                    btSocket = null;
+                    return null;
+                } catch (InterruptedException e) {
+                    System.out.println("Exception on Sleep");
+                    e.printStackTrace();
+                    disconnect();
+                    return null;
+                }
+            }
+
+            //send the command
+            //Generate byte command to be sent
+            byte[] sendCommand = new byte[command.length];
+
+            for (int i = 0; i < command.length; i++) {
+                sendCommand[i] = command[i];
+            }
+
+            //send the command
+            try {
+                System.out.println("Sending: " + Arrays.toString(sendCommand));
+                btSocket.getOutputStream().write(sendCommand);
+
+                //wait for a response
+                long startTime = System.currentTimeMillis();
+                long timeout = 3000;
+                while (System.currentTimeMillis() < (startTime + timeout)) {
+                    if (btSocket.getInputStream().available() != 0) {
+                        break;
+                    }
+                    System.out.println("Bytes in inputStream: " + btSocket.getInputStream().available());
+                    System.out.println("timeout: " + (System.currentTimeMillis() > (startTime + timeout)));
+                    Thread.sleep(100);
+                }
+
+                //Check that we got a response
+                if (btSocket.getInputStream().available() == 0) {
+                    //No Data returned so return null
+                    System.out.println("No Data Returned here");
+                    disconnect();
+                    return null;
+
+                }
+                Thread.sleep(100);
+                //Success
+                byte[] returnData = new byte[btSocket.getInputStream().available()];
+                btSocket.getInputStream().read(returnData);
+                System.out.println("Received: " + Arrays.toString(returnData) + "After " + (System.currentTimeMillis() - startTime) + " ms");
+                return returnData;
+
+            } catch (IOException e) {
+                System.out.println("Exception reading or writing to Bluetooth Socket");
+                e.printStackTrace();
+                disconnect();
+                return null;
+            } catch (InterruptedException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+                return null;
+            } catch (NullPointerException e) {
+                return null;
+            }
+        }
 
     }
 

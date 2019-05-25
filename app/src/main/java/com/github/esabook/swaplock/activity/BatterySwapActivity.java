@@ -1,4 +1,4 @@
-package com.github.esabook.swaplock;
+package com.github.esabook.swaplock.activity;
 
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
@@ -20,13 +20,13 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Toast;
 
+import com.github.esabook.swaplock.R;
 import com.github.esabook.swaplock.adapters.PairedBuetoothAdapter;
+
 import com.github.esabook.swaplock.databinding.ActivityMainBinding;
 import com.sothree.slidinguppanel.SlidingUpPanelLayout;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -37,20 +37,62 @@ import me.everything.android.ui.overscroll.OverScrollDecoratorHelper;
 //import android.support.annotation.Nullable;
 //import com.github.esabook.swaplock.fragments.EnableBluetoothDialog;
 
-public class MainActivity extends AppCompatActivity {
+public class BatterySwapActivity extends AppCompatActivity {
 
     static final int REQUEST_ENABLE_BT = 87;
+    /**
+     *
+     */
+    private final View.OnClickListener turningBt = v -> {
+        Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+        startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+    };
     ActivityMainBinding mBinding;
     BluetoothAdapter mBtAdapter;
+    /**
+     *
+     */
+    private final View.OnClickListener findBt = v -> {
+        if (mBinding.getIsScanningMode()) {
+            mBtAdapter.cancelDiscovery();
+        } else {
+            Intent scan = new Intent(BatterySwapActivity.this, BatteryScanActivity.class);
+            startActivityForResult(scan, 554);
+
+        }
+    };
     PairedBuetoothAdapter mPairedBtAdapter;
     List<BluetoothDevice> mPairedBt = new ArrayList<>();
-    BluetoothDevice mSelectedDevice;
+    /**
+     *
+     */
+    private final View.OnClickListener showPairedBt = v -> {
+        //Get Paired Devices
+        Set<BluetoothDevice> pairedDevices = mBtAdapter.getBondedDevices();
+        mPairedBt.clear();
+        mPairedBt.addAll(pairedDevices);
+        mPairedBtAdapter.notifyDataSetChanged();
 
+    };
+    BluetoothDevice mSelectedDevice;
     private boolean isOnScrolled;
+    /**
+     *
+     */
+    AdapterView.OnItemClickListener btItemClick = new AdapterView.OnItemClickListener() {
+        @Override
+        public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+            if (isOnScrolled) return;
+            mSelectedDevice = mPairedBtAdapter.getItem(i);
+
+            Intent intent = new Intent(BatterySwapActivity.this, BatteryControlActivity.class);
+            intent.putExtra(BatteryControlActivity.BT_DEVICE, mSelectedDevice);
+            startActivity(intent);
+
+        }
+    };
     private boolean isLayoutPrepared;
     private boolean isDiscoveringOnProgress;
-
-
     /**
      *
      */
@@ -89,36 +131,6 @@ public class MainActivity extends AppCompatActivity {
     };
 
     /**
-     *
-     */
-    AdapterView.OnItemClickListener btItemClick = new AdapterView.OnItemClickListener() {
-        @Override
-        public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-            if (isOnScrolled) return;
-            mSelectedDevice = mPairedBtAdapter.getItem(i);
-
-            Intent intent = new Intent(MainActivity.this, ControlActivity.class);
-            intent.putExtra(ControlActivity.BT_DEVICE, mSelectedDevice);
-            startActivity(intent);
-
-        }
-    };
-
-    /**
-     *
-     */
-    private final View.OnClickListener findBt = v -> {
-        if (mBinding.getIsScanningMode()) {
-            mBtAdapter.cancelDiscovery();
-        } else {
-            Intent scan = new Intent(MainActivity.this, ScanActivity.class);
-            startActivityForResult(scan, 554);
-
-        }
-    };
-
-
-    /**
      * @param savedInstanceState
      */
     @Override
@@ -128,7 +140,14 @@ public class MainActivity extends AppCompatActivity {
         mBtAdapter = BluetoothAdapter.getDefaultAdapter();
 
         getSupportActionBar().setTitle("Select Battery");
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
+    }
+
+    @Override
+    public boolean onSupportNavigateUp() {
+        onBackPressed();
+        return super.onSupportNavigateUp();
     }
 
     @Override
@@ -138,7 +157,6 @@ public class MainActivity extends AppCompatActivity {
             prepareLayout();
         }
     }
-
 
     @Override
     protected void onPause() {
@@ -221,27 +239,6 @@ public class MainActivity extends AppCompatActivity {
     /**
      *
      */
-    private final View.OnClickListener turningBt = v -> {
-        Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-        startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-    };
-
-    /**
-     *
-     */
-    private final View.OnClickListener showPairedBt = v -> {
-        //Get Paired Devices
-        Set<BluetoothDevice> pairedDevices = mBtAdapter.getBondedDevices();
-        mPairedBt.clear();
-        mPairedBt.addAll(pairedDevices);
-        mPairedBtAdapter.notifyDataSetChanged();
-
-    };
-
-
-    /**
-     *
-     */
     void prepareDiscoveringBT() {
         if (mBtAdapter == null) {
             Toast.makeText(this, "Bluetooth module not found", Toast.LENGTH_LONG).show();
@@ -283,7 +280,7 @@ public class MainActivity extends AppCompatActivity {
 
         // refresh action
         boolean isBtEnabled = mBtAdapter.isEnabled();
-        if (!isBtEnabled && !getClass().equals(MainActivity.class)) {
+        if (!isBtEnabled && !getClass().equals(BatterySwapActivity.class)) {
             finish();
         } else {
             startDiscoverBt();

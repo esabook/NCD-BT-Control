@@ -1,13 +1,14 @@
 <resources>
     <string name="app_name">SwapLock (demo)</string>
+    <string name="msg_default_type">Type</string>
+    <string name="msg_default_time">Time</string>
+    <string name="msg_default_format">Format</string>
+    <string name="msg_default_meta">Metadata</string>
+    <string name="swaplock">Swap Battery</string>
     <string name="turn_power_bluetooth">Turn On Bluetooth</string>
     <string name="continue_act">Continue</string>
     <string name="or_scan_here">Or Scan Here</string>
     <string name="scan_this_battery">Scan this Battery</string>
     <string name="or_select_from_a_list_here">Or Select from a list here</string>
-    <string name="msg_default_type">Type</string>
-    <string name="msg_default_time">Time</string>
-    <string name="msg_default_format">Format</string>
-    <string name="msg_default_meta">Metadata</string>
     <string name="msg_default_status">Place a barcode inside the viewfinder rectangle to scan it.</string>
 </resources>
