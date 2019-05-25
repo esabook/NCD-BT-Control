@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <color name="colorPrimary">@color/Loams</color>
+    <color name="colorPrimaryDark">@color/LeafBrown</color>
+    <color name="colorAccent">@color/Ivy</color>
+
+    <color name="transparent2">#00000000</color>
+    <color name="Orange">#FFA500</color>
+    <color name="Black">#2e2e2e</color>
+    <color name="LeafBrown">#687f772f</color>
+    <color name="Ivy">#7C933B </color>
+    <color name="Concord">#6A5676</color>
+    <color name="Loams">#5f5640</color>
+
+
+    <!-- Android standard ICS color -->
+    <color name="result_minor_text">#ffc0c0c0</color>
+    <!-- Android standard ICS color -->
+    <color name="result_text">#ffffffff</color>
+    <color name="result_view">#b0000000</color>
+    <color name="status_text">#ffffffff</color>
+    <!-- Android standard ICS color -->
+
+    <!--wireframe view color-->
+
+</resources>
