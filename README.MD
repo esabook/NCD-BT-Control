@@ -21,3 +21,8 @@ Page:
 - relay control
 
 
+
+
+
+![mockup](doc/mockup.png)
+
